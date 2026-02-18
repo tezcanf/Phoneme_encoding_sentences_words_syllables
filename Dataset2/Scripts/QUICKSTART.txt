@@ -1,0 +1,620 @@
+================================================================================
+QUICK START GUIDE
+Unified TRF Estimation Pipeline
+================================================================================
+
+This guide will walk you through running the complete TRF estimation pipeline
+from preprocessed MEG data to analysis results. The pipeline handles both Dutch
+and Chinese participants with native and non-native stimuli.
+
+================================================================================
+STEP 1: ORGANIZE YOUR DATA
+================================================================================
+
+Ensure your directory structure matches:
+
+Project/
+├── Materials/
+│   ├── Dutch_stimuli/                           # Materials for Dutch stimuli
+│   │   ├── Stimuli/
+│   │   │   ├── Dutch_participants/
+│   │   │   │   ├── Words/                       # Audio files
+│   │   │   │   │   └── Audio_*.wav
+│   │   │   │   └── Syllables/
+│   │   │   │       └── Audio_*.wav
+│   │   │   └── Chinese_participants/            # Audio files for Chinese subjects
+│   │   │       ├── Words/
+│   │   │       └── Syllables/
+│   │   ├── Predictors/
+│   │   │   ├── Dutch_participants/
+│   │   │   │   ├── Words/
+│   │   │   │   │   ├── *~gammatone-8.pickle
+│   │   │   │   │   ├── *~gammatone-on-8.pickle
+│   │   │   │   │   └── *~phoneme_cohort_model.pickle
+│   │   │   │   └── Syllables/
+│   │   │   └── Chinese_participants/
+│   │   │       ├── Words/
+│   │   │       └── Syllables/
+│   │   ├── Cohort_model_Dutch_participants/     # Cohort model outputs
+│   │   │   ├── Words/
+│   │   │   │   └── *_cohort_model.csv
+│   │   │   └── Syllables/
+│   │   └── Cohort_model_Chinese_participants/
+│   │       ├── Words/
+│   │       └── Syllables/
+│   │
+│   └── Chinese_stimuli/                         # Materials for Chinese stimuli
+│       ├── Stimuli/
+│       │   ├── Dutch_participants/
+│       │   │   ├── Words/
+│       │   │   └── Syllables/
+│       │   └── Chinese_participants/
+│       │       ├── Words/
+│       │       └── Syllables/
+│       ├── Predictors/
+│       │   ├── Dutch_participants/
+│       │   │   ├── Words/
+│       │   │   └── Syllables/
+│       │   └── Chinese_participants/
+│       │       ├── Words/
+│       │       └── Syllables/
+│       └── Cohort_model_Dutch_participants/
+│           └── Cohort_model_Chinese_participants/
+│
+├── Dutch_participants/                          # Dutch subject data
+│   ├── raw/                                     # Raw MEG data (CTF format)
+│   │   └── sub-003/
+│   │       └── ses-meg02/
+│   │           └── meg/
+│   └── processed/                               # Processed MEG data
+│       └── sub-003/
+│           └── meg/
+│               ├── sub-003_resampled_300Hz-1-100Hz_filtered-ICA-eyeblink_Dutch_stimuli.fif
+│               ├── sub-003_resampled_300Hz-1-100Hz_filtered-ICA-eyeblink_Chinese_stimuli.fif
+│               ├── sub-003-eve_Dutch_stimuli.fif
+│               ├── sub-003-eve_Chinese_stimuli.fif
+│               ├── sub-003_forward.fif
+│               ├── sub-003_inverse.fif
+│               ├── sub-003-trans.fif            # Transformation matrix
+│               └── TRF/                         # Created by TRF scripts
+│                   ├── Words/
+│                   │   ├── sub-003 Control2_*_Dutch_stimuli_*_lh.pickle
+│                   │   └── sub-003 Control2_*_Dutch_stimuli_*_rh.pickle
+│                   └── Syllables/
+│
+└── Chinese_participants/                        # Chinese subject data
+    ├── raw/
+    │   └── sub-021/
+    └── processed/
+        └── sub-021/
+            └── meg/
+                ├── sub-021_resampled_300Hz-1-100Hz_filtered-ICA-eyeblink_Chinese_stimuli.fif
+                ├── sub-021_resampled_300Hz-1-100Hz_filtered-ICA-eyeblink_Dutch_stimuli.fif
+                ├── sub-021-eve_Chinese_stimuli.fif
+                ├── sub-021-eve_Dutch_stimuli.fif
+                └── TRF/
+                    ├── Words/
+                    └── Syllables/
+
+CRITICAL FILE NAMING:
+- MEG files MUST include stimulus type: *_Dutch_stimuli.fif or *_Chinese_stimuli.fif
+- Events files MUST match: {subject}-eve_Dutch_stimuli.fif
+- For cross-linguistic design, each subject needs BOTH stimulus versions
+
+================================================================================
+STEP 2: CONFIGURE THE PIPELINE
+================================================================================
+
+Open config.py and verify/update:
+
+1. Subject Lists
+   ---------------
+   DUTCH_SUBJECTS = [
+       'sub-003', 'sub-005', 'sub-007', ...
+   ]
+   
+   CHINESE_SUBJECTS = [
+       'sub-021', 'sub-022', 'sub-023', ...
+   ]
+   
+   → Add or remove subjects as needed for your dataset
+
+2. Data Paths
+   ----------
+   The configuration automatically constructs paths based on ROOT_DIR.
+   ROOT_DIR is set to: Path.cwd().parents[1]  # Two levels up from working directory
+   
+   Key path functions in config.py:
+   
+   get_materials_root(stimulus_type)
+   → ROOT_DIR / 'Materials' / f'{stimulus_type}_stimuli'
+   
+   get_meg_root(subject_group)
+   → ROOT_DIR / f'{subject_group}_participants' / 'processed'
+   
+   Examples:
+   - Dutch stimuli materials: ROOT_DIR / 'Materials' / 'Dutch_stimuli'
+   - Chinese stimuli materials: ROOT_DIR / 'Materials' / 'Chinese_stimuli'
+   - Dutch participant MEG: ROOT_DIR / 'Dutch_participants' / 'processed'
+   - Chinese participant MEG: ROOT_DIR / 'Chinese_participants' / 'processed'
+   
+   → If your structure differs, modify ROOT_DIR in config.py
+   → Or modify get_materials_root() and get_meg_root() functions
+
+3. TRF Parameters (optional)
+   -------------------------
+   TRF_PARAMS = {
+       'tmin': -0.05,           # Start time
+       'tmax': 0.7,             # End time
+       'error': 'l2',           # Error function
+       'basis': 0.050,          # Basis function width
+       'partitions': 5,         # Cross-validation folds
+       'test': 1,               # Test partition
+       'selective_stopping': True,
+       'n_stimuli': 40          # Number of trials
+   }
+   
+   → Usually no need to change these
+   → Reduce n_stimuli if you have memory issues
+
+4. Save config.py
+
+================================================================================
+STEP 3: VALIDATE YOUR SETUP (IMPORTANT!)
+================================================================================
+
+Before running TRF estimation, validate that all files are present:
+
+Quick validation (tests one subject per group):
+
+python validate_setup.py --quick --stimulus-type native
+
+Full validation (all subjects):
+
+python validate_setup.py --group all --stimulus-type native
+
+For cross-linguistic design, validate both:
+
+python validate_setup.py --group dutch --stimulus-type Chinese
+python validate_setup.py --group chinese --stimulus-type Dutch
+
+What it checks:
+✓ Stimulus directories exist
+✓ Audio files present for each subject
+✓ Predictor files exist (gammatone, phoneme)
+✓ MEG files correctly named with stimulus type
+✓ Events files present
+✓ Forward/inverse solutions exist
+✓ FreeSurfer anatomy directories
+
+If validation FAILS:
+- Review error messages carefully
+- Check file naming conventions
+- Verify paths in config.py
+- Generate missing predictor files (see Step 4)
+
+If validation PASSES:
+→ Proceed to TRF estimation!
+
+================================================================================
+STEP 4: GENERATE PREDICTORS (If Missing)
+================================================================================
+
+If validation shows missing predictor files, generate them:
+
+A. Gammatone Spectrograms
+   -----------------------
+   1. Open Make_gammatone.py
+   2. Set paths (EDIT THESE VARIABLES):
+      root = Path.cwd().parents[0]
+      DATA_ROOT = root / 'Materials'
+      
+      # Set based on what you're processing:
+      STIMULUS_DIR = DATA_ROOT / 'Dutch_stimuli' / 'Stimuli' / 'Dutch_participants' / 'Words'
+      PREDICTOR_DIR = DATA_ROOT / 'Dutch_stimuli' / 'Predictors' / 'Dutch_participants' / 'Words'
+   
+   3. Run:
+      python Make_gammatone.py
+   
+   4. Repeat for each combination:
+      - Dutch_stimuli / Dutch_participants: Words, Syllables
+      - Dutch_stimuli / Chinese_participants: Words, Syllables
+      - Chinese_stimuli / Dutch_participants: Words, Syllables
+      - Chinese_stimuli / Chinese_participants: Words, Syllables
+
+B. Phoneme Predictors
+   -------------------
+   1. Open Make_phoneme_predictors.py
+   2. Set paths (EDIT THESE VARIABLES):
+      root = Path.cwd().parents[0]
+      DATA_ROOT = root / 'Materials'
+      
+      # Set based on what you're processing:
+      STIMULUS_DIR = DATA_ROOT / 'Dutch_stimuli' / 'Cohort_model_Dutch_participants' / 'Words'
+      PREDICTOR_DIR = DATA_ROOT / 'Dutch_stimuli' / 'Predictors' / 'Dutch_participants' / 'Words'
+   
+   3. Run:
+      python Make_phoneme_predictors.py
+   
+   4. Repeat for each participant group and condition
+
+Verification:
+For each audio file Audio_X_Y.wav, you should have:
+- Audio_X_Y~gammatone-8.pickle
+- Audio_X_Y~gammatone-on-8.pickle
+- Audio_X_Y~phoneme_cohort_model.pickle
+
+================================================================================
+STEP 5: CHOOSE YOUR ESTIMATION METHOD
+================================================================================
+
+You have THREE options for running TRF estimation:
+
+OPTION A: Command-Line (Most Flexible) ★ RECOMMENDED
+-----------------------------------------------------
+Best for: Cluster computing, batch processing, automation
+
+Examples:
+
+# Test with single subject first
+python estimate_trfs_unified.py --subjects sub-003 --conditions Words
+
+# Dutch subjects with native (Dutch) stimuli
+python estimate_trfs_unified.py --group dutch --stimulus-type native
+
+# Chinese subjects with native (Chinese) stimuli
+python estimate_trfs_unified.py --group chinese --stimulus-type native
+
+# Cross-linguistic: Dutch subjects with Chinese stimuli
+python estimate_trfs_unified.py --group dutch --stimulus-type Chinese
+
+# Cross-linguistic: Chinese subjects with Dutch stimuli
+python estimate_trfs_unified.py --group chinese --stimulus-type Dutch
+
+# All subjects, all conditions, native stimuli
+python estimate_trfs_unified.py --all --stimulus-type native
+
+# All subjects with non-native stimuli
+python estimate_trfs_unified.py --all --stimulus-type non-native
+
+See full options:
+python estimate_trfs_unified.py --help
+
+
+OPTION B: Interactive Script
+-----------------------------
+Best for: Jupyter notebooks, IPython, interactive sessions
+
+1. Open run_trf_estimation.py
+2. Edit configuration section at top:
+
+   SUBJECTS_TO_PROCESS = ['sub-003']      # Your subjects
+   CONDITIONS_TO_PROCESS = ['Words']      # Your conditions
+   STIMULUS_TYPE = 'native'               # native, non-native, Dutch, Chinese
+
+3. Run in Python:
+   python run_trf_estimation.py
+   
+   Or in Jupyter:
+   %run run_trf_estimation.py
+
+
+OPTION C: Batch Script
+----------------------
+Best for: Simple batch processing without command-line arguments
+
+1. Open run_batch.py
+2. Edit settings:
+
+   MODE = 'dutch'              # 'dutch', 'chinese', 'all', 'single', 'multiple'
+   SUBJECTS = ['sub-003']      # For 'single' or 'multiple' mode
+   CONDITIONS = ['Words']      # Conditions to process
+   STIMULUS_TYPE = 'native'    # Stimulus configuration
+
+3. Run:
+   python run_batch.py
+
+================================================================================
+STEP 6: RUN TRF ESTIMATION - SINGLE SUBJECT TEST
+================================================================================
+
+Start with a single subject to verify everything works:
+
+1. Run single subject estimation:
+   
+   python estimate_trfs_unified.py \
+       --subjects sub-003 \
+       --conditions Words \
+       --stimulus-type native
+
+2. Expected output:
+   
+   ================================================================================
+   TRF ESTIMATION CONFIGURATION
+   ================================================================================
+   Subjects: 1 subject(s)
+   Conditions: ['Words']
+   Stimulus type: native
+   ================================================================================
+   
+   ================================================================================
+   Processing sub-003 - Words - Dutch stimuli
+   ================================================================================
+   
+   Found 40 stimuli for sub-003
+   Loading predictors...
+   Loading source space data...
+   Concatenating trials...
+   
+   --------------------------------------------------------------------------------
+   Estimating: sub-003 ~ Control2_Delta+Theta_STG_sources_normalized_Dutch_stimuli_acoustic
+   --------------------------------------------------------------------------------
+     Estimating left hemisphere TRF...
+     ✓ Saved left hemisphere TRF
+     Estimating right hemisphere TRF...
+     ✓ Saved right hemisphere TRF
+   
+   [... continues for other models ...]
+   
+   ✓ Completed sub-003 - Words
+
+3. Verify output files:
+   
+   processed/sub-003/meg/TRF/Words/
+   ├── sub-003 Control2_Delta+Theta_STG_sources_normalized_Dutch_stimuli_acoustic_lh.pickle
+   ├── sub-003 Control2_Delta+Theta_STG_sources_normalized_Dutch_stimuli_acoustic_rh.pickle
+   ├── sub-003 Control2_Delta+Theta_STG_sources_normalized_Dutch_stimuli_acoustic+phonemes_lh.pickle
+   ├── sub-003 Control2_Delta+Theta_STG_sources_normalized_Dutch_stimuli_acoustic+phonemes_rh.pickle
+   └── [... other models ...]
+
+4. Check file sizes:
+   - Each pickle file should be 100-200 MB
+   - If much smaller, something went wrong
+
+5. Quick inspection in Python:
+   
+   import eelbrain
+   trf = eelbrain.load.unpickle('processed/sub-003/meg/TRF/Words/sub-003 Control2_*_acoustic_lh.pickle')
+   print(trf.h)  # TRF weights
+   print(trf.r)  # Correlation (model performance)
+
+If this works, proceed to full processing!
+
+================================================================================
+STEP 7: RUN FULL TRF ESTIMATION
+================================================================================
+
+OPTION 1: Sequential Processing (Local Computer)
+-------------------------------------------------
+Suitable for: Small datasets, testing, overnight runs
+
+Run all subjects:
+
+python estimate_trfs_unified.py \
+    --all \
+    --stimulus-type native
+
+
+
+OPTION 2: Cluster Computing (SLURM) ★ RECOMMENDED
+--------------------------------------------------
+Suitable for: Large datasets, production runs
+
+Create SLURM script: run_trf_cluster.sh
+
+#!/bin/bash
+#SBATCH --job-name=trf_array
+#SBATCH --array=1-15              # Number of subjects (adjust)
+#SBATCH --time=48:00:00            # Max time per job
+#SBATCH --mem=64G                  # Memory per job
+#SBATCH --cpus-per-task=4          # CPUs per job
+#SBATCH --output=logs/trf_%A_%a.out
+#SBATCH --error=logs/trf_%A_%a.err
+
+# Load modules
+module load Python/3.9.6
+source activate trf_env
+
+# Subject list (adjust to your subjects)
+SUBJECTS=(sub-003 sub-005 sub-007 sub-008 sub-009 sub-010 sub-012 sub-013 
+          sub-014 sub-015 sub-016 sub-017 sub-018 sub-019 sub-020)
+
+# Get subject for this array task
+SUBJECT=${SUBJECTS[$SLURM_ARRAY_TASK_ID-1]}
+
+# Run TRF estimation
+python estimate_trfs_unified.py \
+    --subjects $SUBJECT \
+    --stimulus-type native
+
+Submit job:
+
+mkdir -p logs
+sbatch run_trf_cluster.sh
+
+Monitor jobs:
+
+squeue -u $USER
+tail -f logs/trf_*.out
+
+
+OPTION 3: Cross-Linguistic Design
+----------------------------------
+For non-native stimulus processing:
+
+# Dutch subjects with Chinese stimuli
+python estimate_trfs_unified.py \
+    --group dutch \
+    --stimulus-type Chinese
+
+# Chinese subjects with Dutch stimuli
+python estimate_trfs_unified.py \
+    --group chinese \
+    --stimulus-type Dutch
+
+Or use SLURM array job with modified script to process both.
+
+================================================================================
+STEP 8: VERIFY RESULTS
+================================================================================
+
+After TRF estimation completes:
+
+1. Check that all expected files exist:
+   
+   for subject in sub-003 sub-005 ...; do
+       ls processed/$subject/meg/TRF/Words/*_lh.pickle
+       ls processed/$subject/meg/TRF/Words/*_rh.pickle
+   done
+
+2. Count files:
+   
+   # Should have 2 files (lh, rh) per model per condition per subject
+   # Example: 5 models × 2 conditions × 2 hemispheres = 20 files per subject
+   
+   find processed/*/meg/TRF -name "*.pickle" | wc -l
+
+3. Inspect TRF quality in Python:
+   
+   import eelbrain
+   import numpy as np
+   
+   # Load a TRF
+   trf = eelbrain.load.unpickle('processed/sub-003/meg/TRF/Words/sub-003 Control2_*_acoustic+phonemes_lh.pickle')
+   
+   # Check correlation (should be positive, typically 0.05-0.20)
+   print(f"Mean correlation: {trf.r.mean():.3f}")
+   
+   # Check TRF weights shape
+   print(f"TRF shape: {trf.h[0].shape}")
+   
+   # Check for NaNs (should be none)
+   for i, h in enumerate(trf.h):
+       if np.any(np.isnan(h.x)):
+           print(f"WARNING: NaN values in predictor {i}")
+
+4. Quick visualization:
+   
+   import matplotlib.pyplot as plt
+   
+   # Plot TRF for gammatone predictor
+   trf.h[0].mean('source').plot()
+   plt.title('Gammatone TRF')
+   plt.show()
+
+If all checks pass, proceed to analysis!
+
+================================================================================
+STEP 9: RUN STATISTICAL ANALYSIS
+================================================================================
+
+Now analyze your TRF results:
+
+A. TRF Weight Analysis
+   --------------------
+   Compares conditions (e.g., Words vs Syllables, Dutch vs Chinese stimuli)
+   
+   1. Open TRF_weight_analysis.py
+   2. Configure analysis:
+      
+      # Choose participant group
+      PARTICIPANT_GROUP = 'Dutch'  # or 'Chinese'
+      
+      # Choose analysis type
+      ANALYSIS_TYPE = 'language_comparison'  # or 'condition_comparison'
+      
+      # Choose version
+      VERSION = 'original'  # or 'revision'
+      
+      # For condition comparison only:
+      STIMULI_LANGUAGE = 'Dutch'  # or 'Chinese'
+   
+   3. Run:
+      python TRF_weight_analysis.py
+   
+   4. Output:
+      root / 'Scripts' / 'TRF_weight_analysis' / 'Output' /
+      ├── clu_*_STG_normalized_*.pickle    # Cluster statistics
+      └── *_source_whole_brain.npy         # Significance masks
+
+Example configurations:
+
+# Compare Dutch vs Chinese stimuli (Dutch participants)
+PARTICIPANT_GROUP = 'Dutch'
+ANALYSIS_TYPE = 'language_comparison'
+VERSION = 'original'
+
+# Compare Words vs Syllables (Chinese participants, Chinese stimuli)
+PARTICIPANT_GROUP = 'Chinese'
+ANALYSIS_TYPE = 'condition_comparison'
+STIMULI_LANGUAGE = 'Chinese'
+VERSION = 'original'
+
+
+B. Model Accuracy Analysis
+   ------------------------
+   Compares explained variance across models
+   
+   1. Open Accuracy_analysis.py
+   2. Configure paths and subjects
+   3. Run:
+      python Accuracy_analysis.py
+   
+   4. Output:
+      Scripts/Accuracy_analysis/Results_publication/
+      ├── accuracy_improvements_*.csv      # Numerical results
+      └── accuracy_improvements_boxplot.svg # Figure
+
+
+C. Response Letter Analyses (Optional)
+   ------------------------------------
+   Reviewer-requested decomposition analyses
+   
+   python Accuracy_analysis_response_letter.py
+   python Accuracy_analysis_response_letter2.py
+
+================================================================================
+STEP 10: VISUALIZE RESULTS
+================================================================================
+
+Generate publication-quality figures:
+
+1. Open visualize_trf_results.py
+2. Configure:
+   - Subject lists
+   - Conditions to visualize
+   - Output paths
+
+3. Run:
+   python visualize_trf_results.py
+
+4. Output:
+   Scripts/Visualize_TRF_weights/Output/
+   └── *.svg    # Publication-ready figures
+
+5. View figures:
+   - Open SVG files in web browser, Inkscape, or Adobe Illustrator
+   - Figures show time-course of TRF weights
+
+================================================================================
+GETTING HELP
+================================================================================
+
+If you encounter issues:
+
+1. Check README.txt for detailed documentation
+2. Run validation to identify missing files
+3. Try single subject first
+4. Check file naming conventions
+5. Verify paths in config.py
+6. Review error messages carefully
+7. Inspect intermediate outputs
+
+Common Resources:
+- Eelbrain docs: https://eelbrain.readthedocs.io/
+- MNE-Python docs: https://mne.tools/
+- TRFtools: https://github.com/christianbrodbeck/TRF-Tools
+
+Contact:
+- Author: Filiz Tezcan
+- Email: filiz.tezcansemerci@mpi.nl

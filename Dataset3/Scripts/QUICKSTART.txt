@@ -1,0 +1,348 @@
+================================================================================
+QUICK START GUIDE
+================================================================================
+
+This guide walks you through running the complete TRF analysis pipeline from
+preprocessed MEG data to publication figures. 
+
+================================================================================
+STEP 1: ORGANIZE YOUR DATA
+================================================================================
+
+The pipeline expects this directory structure:
+
+YourProject/
+├── processed/                    # Your preprocessed MEG data
+│   └── sub-XXX/
+│       └── meg/
+│           ├── sub-XXX_resampled_300Hz-05-145Hz_filtered-ICA-eyeblink-epochs.fif
+│           ├── sub-XXX-eve.fif
+│           └── meg/
+│               └── sub-XXX-trans.fif
+├── Materials/
+│   ├── Stimuli/
+│   │   ├── Sounds_Syllables/
+│   │   │   ├── control_sentence/    # .wav files
+│   │   │   ├── random_word_list/
+│   │   │   └── random_syllables/
+│   │   └── Block_order/
+│   │       └── subjects_block_no.xlsx
+│   ├── Cohort_model/
+│   └── Predictors/                  # Will be created by scripts
+└── Scripts/                         # Put the pipeline scripts here
+
+IMPORTANT FILE NAMING:
+- MEG epochs: {subject}_resampled_300Hz-05-145Hz_filtered-ICA-eyeblink-epochs.fif
+- Events: {subject}-eve.fif
+- Trans: {subject}-trans.fif
+
+If your files have different names, edit the templates in config.py:
+EPOCHS_FILENAME = '{subject}_your-naming-pattern-epochs.fif'
+
+================================================================================
+STEP 2: CONFIGURE THE PIPELINE
+================================================================================
+
+1. Open config.py in a text editor
+
+2. Check DATA_ROOT path:
+   
+   # Default (auto-detects from script location):
+   DATA_ROOT = Path.cwd().parents[1]
+   
+   # Or set manually:
+   DATA_ROOT = Path('/path/to/YourProject')
+
+3. Verify subject list:
+   
+   SUBJECTS = [
+       'sub-006', 'sub-008', 'sub-009', ...
+   ]
+   
+   Add or remove subjects to match your dataset.
+
+4. Check condition names match your data:
+   
+   The pipeline uses simplified names ('sentences', 'words', 'syllables')
+   but maps them to directory names internally:
+   
+   CONDITION_DIR_MAPPING = {
+       'sentences': 'control_sentence',     # Your directory name
+       'words': 'random_word_list',
+       'syllables': 'random_syllables',
+   }
+
+5. Adjust TRF parameters if needed:
+   
+   TRF_PARAMS = {
+       'tmin': -0.05,      # TRF window start
+       'tmax': 0.7,        # TRF window end
+       'basis': 0.050,     # Basis function width
+       'partitions': 5,    # Cross-validation folds
+   }
+
+SAVE the file when done.
+
+================================================================================
+STEP 3: PREPARE PHONEME TRANSCRIPTIONS
+================================================================================
+
+Your phoneme transcription files should be CSV format with these columns:
+
+Required columns:
+- words: Word in text form
+- phonemes: Individual phoneme
+- phoneme_onset: Start time in seconds
+- phoneme_offset: End time in seconds
+
+Example:
+words,phonemes,phoneme_onset,phoneme_offset
+the,ð,0.00,0.05
+the,ə,0.05,0.10
+cat,k,0.10,0.15
+cat,æ,0.15,0.22
+cat,t,0.22,0.28
+
+Place these files in a folder accessible to the scripts.
+You'll specify the path in the feature generation scripts.
+
+================================================================================
+STEP 4: GENERATE COHORT MODEL FEATURES
+================================================================================
+
+The cohort model calculates phoneme-level surprisal and entropy.
+
+1. Open Cohort_model.py
+
+2. Configure paths at the top:
+   
+   root = Path.cwd().parents[1]  # Or your project root
+   
+   # Input: phoneme transcriptions
+   stimulus_dir = root / 'Materials' / 'Stimuli' / 'Transcription_full_instances'
+   
+   # Output: cohort features
+   output_folder = root / 'Materials' / 'Cohort_model'
+
+3. Verify frequency file path:
+   
+   FREQ_FILENAME = 'tur_wikipedia_2021_300K-words_filtered_corrected_app_removed_merged.csv'
+   
+   This should contain columns: Word, Freq
+
+4. Run the script:
+   
+   python Cohort_model.py
+
+5. WAIT for processing 
+
+6. Verify output files created:
+   - Files should have '_cohort_model.csv' suffix
+   - Should contain 'cohort_surprisal' and 'cohort_entropy' columns
+
+================================================================================
+STEP 5: ADD GPT-2 WORD FEATURES
+================================================================================
+
+GPT-2 adds word-level surprisal and entropy.
+
+1. Open Add_GPT_features.py
+
+2. Configure paths:
+   
+   DATA_FOLDER = root / 'Materials' /  'Cohort_model'
+   OUTPUT_FOLDER = root / 'Materials' / 'Cohort_model' / 'with_word_features'
+
+3. Choose GPT-2 model (if needed):
+   
+   MODEL_NAME = "ytu-ce-cosmos/turkish-gpt2-large-750m-instruct-v0.1"
+
+4. Run the script:
+   
+   python Add_GPT_features.py
+
+5. First run will download the model 
+
+6. WAIT for processing 
+
+7. Verify output files:
+   - Files should have '_GPT.csv' suffix
+   - Should contain 'word_surprisal_GPT', 'word_entropy_GPT', 'word_number' columns
+
+
+================================================================================
+STEP 6: GENERATE TRF PREDICTORS
+================================================================================
+
+This creates time-aligned predictor matrices from audio and features.
+
+1. Open generate_predictors.py
+
+2. Verify paths in configuration section:
+   
+   DATA_ROOT = root / 'Materials'
+   
+   # Should point to audio files
+   # Should point to feature CSVs
+
+3. Run for all predictor types:
+   
+   python generate_predictors.py --predictor-type all
+
+   Or run selectively:
+   python generate_predictors.py --predictor-type gammatone
+   python generate_predictors.py --predictor-type word-cohort
+   python generate_predictors.py --predictor-type word-gpt
+
+4. WAIT for processing 
+
+5. Verify outputs in Materials/Predictors/:
+   
+   control_sentence/
+   ├── _1~gammatone-8.pickle
+   ├── _1~gammatone-on-8.pickle
+   ├── _1~phoneme_cohort_model.pickle
+   └── _1~phoneme_cohort_model_GPT.pickle
+
+================================================================================
+STEP 7: ESTIMATE TRF MODELS - SINGLE SUBJECT TEST
+================================================================================
+
+Before running all subjects, test with one subject:
+
+1. Run pipeline for first subject, sentences condition:
+   
+   python estimate_trfs_pipeline.py --condition sentences --subject-index 0
+
+2. Monitor progress:
+   
+   [1/5] Loading stimulus presentation order...
+   [2/5] Loading epochs and filtering rejected trials...
+   [3/5] Loading predictors...
+   [4/5] Creating source space representations...
+   [5/5] Estimating TRFs...
+
+3. WAIT for completion 
+
+4. Verify outputs:
+   
+   TRF_models/control_sentence/sub-006/
+   ├── sub-006 Control2_Delta+Theta_STG_sources_normalized_acoustic_lh.pickle
+   ├── sub-006 Control2_Delta+Theta_STG_sources_normalized_acoustic_rh.pickle
+   ├── sub-006 Control2_Delta+Theta_STG_sources_normalized_acoustic+phonemes_lh.pickle
+   └── ... (multiple models)
+
+
+================================================================================
+STEP 8: ESTIMATE TRF MODELS - ALL SUBJECTS
+================================================================================
+
+After successful test, process all subjects:
+
+OPTION A: Sequential Processing (Overnight)
+--------------------------------------------
+python batch_estimate_trfs.py --condition sentences --all-subjects
+
+OPTION B: Parallel Processing (Recommended for Clusters)
+---------------------------------------------------------
+# Process in batches
+python batch_estimate_trfs.py --condition sentences --subject-range 0 10
+python batch_estimate_trfs.py --condition sentences --subject-range 10 20
+python batch_estimate_trfs.py --condition sentences --subject-range 20 31
+
+OPTION C: Specific Subjects
+----------------------------
+python batch_estimate_trfs.py --condition sentences --subject-indices 0 1 2 3 4
+
+OPTION D: All Conditions for One Subject
+-----------------------------------------
+python batch_estimate_trfs.py --subject-index 0 --all-conditions
+
+
+================================================================================
+STEP 9: STATISTICAL ANALYSIS - TRF WEIGHTS
+================================================================================
+
+Compare TRF weights across conditions:
+
+1. Ensure TRF models exist for all subjects in both conditions being compared
+
+2. Run weight analysis:
+   
+   python TRF_weight_analysis.py
+
+3. The script will:
+   - Load TRF weights for all subjects
+   - Average across STG sources
+   - Compute condition contrasts
+   - Run cluster permutation tests 
+   - Save results
+
+4. Check outputs in Scripts/TRF_weight_analysis/Output/:
+   
+   clu_acoustic_edge_STG_normalized_Control2_Sentence_vs_words_whole_brain.pickle
+   acoustic_edge_Control2_Sentence_vs_words_source_whole_brain.npy
+   (and similar files for other features/comparisons)
+
+5. The .npy files contain binary masks:
+   - 1 = significant time point
+   - NaN = non-significant
+
+================================================================================
+STEP 10: STATISTICAL ANALYSIS - MODEL ACCURACY
+================================================================================
+
+Compare explained variance (R²) across models:
+
+1. Run accuracy analysis:
+   
+   python Accuracy_analysis.py
+
+2. The script will:
+   - Load TRF models (baseline and full)
+   - Calculate R² improvements
+   - Run statistical tests
+   - Generate boxplots
+
+3. Check outputs in Scripts/Accuracy_analysis/Results_publication/:
+   
+   Dataset3_Accuracies_both_hemispheres_sentences_vs_words_STG_Delta_Theta.csv
+   Accuracy_sentences_vs_words.svg
+   Dataset3_Accuracies_both_hemispheres_words_vs_syllables_STG_Delta_Theta.csv
+   Accuracy_words_vs_syllables.svg
+
+4. Open .svg files to view figures:
+   - Adobe Illustrator (for editing)
+   - Inkscape (free alternative)
+   - Web browser (for viewing)
+
+================================================================================
+STEP 11: VISUALIZATION
+================================================================================
+
+Generate publication-quality figures:
+
+1. Run visualization script:
+   
+   python visualize_trf_results.py
+
+2. The script will:
+   - Load TRF weights
+   - Load statistical results
+   - Create time-course plots
+   - Add significance overlays
+   - Save SVG figures
+
+3. Check outputs in Scripts/Visualize_TRF_weights/Output/:
+   
+   Control2_Sentence_vs_words_comparison.svg
+   Control2_Words_vs_syllables_comparison.svg
+
+4. Figures show:
+   - Top panel: Acoustic edge feature
+   - Bottom panel: Phoneme features
+   - Colored lines: Condition means
+   - Shaded areas: Standard error
+   - Red markers: Significant time points (p < 0.05)
+-
+

@@ -1,0 +1,321 @@
+================================================================================
+QUICK START GUIDE
+MEG TRF Analysis Pipeline
+================================================================================
+
+This guide will walk you through running the complete analysis pipeline from
+raw MEG data to publication figures.
+
+================================================================================
+PREREQUISITES
+================================================================================
+
+✓ Python 3.8+ with conda/pip
+✓ Raw MEG data in CTF format (.ds directories)
+✓ Phoneme transcriptions for your stimuli
+✓ Dutch dictionary and frequency files
+✓ Audio files (.wav) of stimuli
+✓ At least 32GB RAM (64GB recommended)
+
+================================================================================
+STEP 0: SETUP ENVIRONMENT
+================================================================================
+
+To create the environment:
+
+1. With conda:
+   conda env create -f environment.yml
+
+2. Or with pip:
+   pip install -r requirements.txt
+ 
+================================================================================
+STEP 1: ORGANIZE YOUR DATA
+================================================================================
+
+Set up directory structure:
+
+YourProject/
+├── raw/                    # Put raw MEG .ds folders here
+│   ├── sub-002/
+│   │   └── ses-meg01/
+│   │       └── meg/
+│   │           └── sub-002_ses-meg01_task-XXX.ds/
+│   └── ...
+├── processed/              # Processed data will go here (create empty)
+├── Materials/              # Linguistic materials
+│   ├── Dutch_dict_2022.txt
+│   ├── SUBTLEX-NL_filtered_2022_cut.csv
+│   ├── Stimuli/
+│   │   ├── Audio/         # Put .wav files here
+│   │   └── Transcription/
+│   │       ├── Word_phoneme_transcription_of_sentences/
+│   │       └── Word_phoneme_transcription_of_words/
+│   ├── Cohort_model/      # Will be created by scripts
+│   └── GPT2/              # Will be created by scripts
+└── Scripts/               # Put analysis scripts here
+
+================================================================================
+STEP 2: CONFIGURE SCRIPTS
+================================================================================
+
+For each script, update the paths at the top:
+
+1. Open the script in a text editor
+2. Find the "CONFIGURATION" or "Paths" section
+3. Update these variables:
+
+   MEG_FOLDER = '/path/to/your/raw/'
+   OUTPUT_MEG_FOLDER = '/path/to/your/processed/'
+   root = Path('/path/to/YourProject/')
+
+4. Update subject list if needed:
+   
+   SUBJECTS = ['sub-002', 'sub-003', ...]  # Your subject IDs
+
+5. Check condition names match your data:
+   
+   CONDITIONS = ['Sentences', 'Word_list']  # Your condition names
+
+TIP: Use absolute paths first, then switch to relative paths once working.
+
+================================================================================
+STEP 3: PREPROCESS MEG DATA (Interactive)
+================================================================================
+
+For EACH subject, run preprocessing interactively:
+
+1. Open Preprocess_MEG_data.py
+2. Set SUBJECT = 'sub-002'  # Change for each subject
+3. Run the script:
+   
+   python Preprocess_MEG_data.py
+
+4. WAIT for ICA plots to appear (this takes several minutes)
+
+5. INSPECT the ICA components:
+   - Look for eye movement artifacts (diagonal patterns)
+   - Look for heartbeat artifacts (temporal patterns)
+   - Look for noise (random high-frequency patterns)
+
+6. IDENTIFY bad components (e.g., 0, 5, 12)
+
+7. EDIT the script:
+   - Find: removed_components = []
+   - Change to: removed_components = [0, 5, 12]  # Your bad components
+   - Comment out: # raise SystemExit("Please inspect...")
+
+8. RE-RUN the script to apply ICA and save
+
+9. VERIFY output files exist:
+   processed/sub-002/meg/sub-002-raw.fif
+   processed/sub-002/meg/sub-002-eve.fif
+
+10. REPEAT for all subjects
+
+
+
+================================================================================
+STEP 4: CALCULATE COHORT MODEL FEATURES
+================================================================================
+
+Calculate phoneme-level surprisal and entropy:
+
+1. Check that phoneme transcription files are in:
+   Materials/Stimuli/Transcription/Word_phoneme_transcription_of_*/
+
+2. Verify you have:
+   Materials/Dutch_dict_2022.txt
+   Materials/SUBTLEX-NL_filtered_2022_cut.csv
+
+3. Run the cohort model script:
+   
+   python Cohort_model.py
+
+4. Output files will be created in:
+   Materials/Cohort_model/Sentences/
+   Materials/Cohort_model/Word_list/
+
+5. Verify output files match input files with "_cohort_model.csv" suffix
+
+
+
+================================================================================
+STEP 5: ADD GPT-2 FEATURES
+================================================================================
+
+Add word-level surprisal and entropy:
+
+1. OPTIONAL: Change model in Add_GPT_features.py:
+   MODEL_NAME = "yhavinga/gpt2-large-dutch"  # Current default
+
+2. Run the GPT-2 feature script:
+   
+   python Add_GPT_features.py
+
+3. The script will:
+   - Download GPT-2 model (first time only, ~1GB)
+   - Process all files in Materials/Cohort_model/Word_list/
+   - Create output in Materials/GPT2/Word_list/
+
+4. Verify output files have "_GPT_new_large.csv" suffix
+
+
+
+================================================================================
+STEP 6: CREATE TRF PREDICTORS
+================================================================================
+
+Generate time-aligned predictor matrices:
+
+1. Open make_predictors.py
+2. Check configuration:
+   - Audio files location
+   - Feature files location
+   - Output location
+
+3. Run for Sentences condition:
+   
+   # Edit script: Condition = 'Sentences'
+   python make_predictors.py
+
+4. Run for Word_list condition:
+   
+   # Edit script: Condition = 'Word_list'
+   python make_predictors.py
+
+5. Verify predictor files created:
+   processed/sub-XXX/meg/TRF/Sentences/sub-XXX predictors-*.pickle
+   processed/sub-XXX/meg/TRF/Word_list/sub-XXX predictors-*.pickle
+
+
+
+================================================================================
+STEP 7: ESTIMATE TRF MODELS
+================================================================================
+
+Fit TRF models to MEG data (LONG RUNNING - Consider cluster computing):
+
+OPTION A: Single Subject (for testing)
+---------------------------------------
+1. Open estimate_trfs_unified.py
+2. Set:
+   SUBJECTS = ['sub-002']  # Just one subject for testing
+   USE_CLUSTER = False
+
+3. Run:
+   python estimate_trfs_unified.py
+
+4. Verify output:
+   processed/sub-002/meg/TRF/Sentences/sub-002 ModelName_lh.pickle
+   processed/sub-002/meg/TRF/Sentences/sub-002 ModelName_rh.pickle
+
+
+
+OPTION B: All Subjects on Cluster (RECOMMENDED)
+------------------------------------------------
+1. Open estimate_trfs_unified.py
+2. Set:
+   SUBJECTS = ['sub-002', 'sub-003', ...]  # All subjects
+   USE_CLUSTER = True
+   N_WORKERS = 10  # Adjust based on cluster
+
+3. Submit as SLURM job or run:
+   python estimate_trfs_unified.py
+
+
+
+OPTION C: All Subjects Sequential (Overnight)
+----------------------------------------------
+1. Same as Option A but with all subjects
+2. Run overnight or over weekend
+
+
+WHAT GETS COMPUTED:
+For each subject, condition, and hemisphere, the script fits multiple
+nested models:
+- Baseline (acoustic only)
+- +Phoneme onset
+- +Phoneme onset + surprisal/entropy
+- Full model (all features)
+
+================================================================================
+STEP 8: STATISTICAL ANALYSIS - TRF WEIGHTS
+================================================================================
+
+Compare TRF weights between conditions:
+
+1. Verify TRF models exist for all subjects
+
+2. Run weight analysis:
+   
+   python TRF_weight_analysis.py
+
+3. The script will:
+   - Load TRF weights for all subjects
+   - Run cluster permutation tests 
+   - Save cluster statistics
+
+4. Output files:
+   Scripts/TRF_weight_analysis/Output/clu_*_STG_normalized_*.pickle
+   Scripts/TRF_weight_analysis/Output/*_source_STG.npy
+
+
+================================================================================
+STEP 9: STATISTICAL ANALYSIS - MODEL ACCURACY
+================================================================================
+
+Compare explained variance across models:
+
+A. Main Feature Comparison
+---------------------------
+python Accuracy_analysis.py
+
+Output:
+- Scripts/Accuracy_analysis/Results_publication/accuracy_improvements_*.csv
+- Scripts/Accuracy_analysis/Results_publication/accuracy_improvements_boxplot.svg
+
+B. Phoneme Feature Decomposition (for reviewers)
+------------------------------------------------
+python Accuracy_analysis_response_letter.py
+
+Output:
+- Phoneme onset vs surprisal/entropy comparison
+
+C. Shuffled Control Analysis (for reviewers)
+--------------------------------------------
+python Accuracy_analysis_response_letter2.py
+
+Output:
+- Normal vs shuffled phoneme processing comparison
+
+
+
+================================================================================
+STEP 10: VISUALIZATION
+================================================================================
+
+Generate publication-quality figures:
+
+1. Run visualization script:
+   
+   python visualize_trf_results.py
+
+2. Output files:
+   Scripts/Visualize_TRF_weights/Output/*.svg
+
+3. Figures show:
+   - Time-course of TRF weight power
+   - Sentences vs Word_list comparison
+   - Statistical significance overlays
+   - Separate panels for acoustic edges and phoneme features
+
+4. Open .svg files in:
+   - Adobe Illustrator (for final editing)
+   - Inkscape (free alternative)
+   - Web browser (for quick viewing)
+
+
+================================================================================
+HAPPY ANALYZING!
+================================================================================

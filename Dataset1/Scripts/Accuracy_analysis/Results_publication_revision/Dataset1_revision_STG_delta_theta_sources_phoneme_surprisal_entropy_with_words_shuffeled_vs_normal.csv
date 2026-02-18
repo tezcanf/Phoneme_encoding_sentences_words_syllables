@@ -1,0 +1,77 @@
+,feature,condition,subject,accuracy
+0,Phoneme Surp./Ent.,Sentences,sub-002,0.004691912956412069
+1,Phoneme Surp./Ent.,Sentences,sub-003,0.0051387264618269176
+2,Phoneme Surp./Ent.,Sentences,sub-004,0.012284725883669708
+3,Phoneme Surp./Ent.,Sentences,sub-005,0.0037007203438158554
+4,Phoneme Surp./Ent.,Sentences,sub-006,0.0009995734754901738
+5,Phoneme Surp./Ent.,Sentences,sub-007,0.003311978349556312
+6,Phoneme Surp./Ent.,Sentences,sub-008,0.0085190320214674
+7,Phoneme Surp./Ent.,Sentences,sub-009,0.005560195738443024
+8,Phoneme Surp./Ent.,Sentences,sub-010,0.010577379500312775
+9,Phoneme Surp./Ent.,Sentences,sub-011,0.009720726039052269
+10,Phoneme Surp./Ent.,Sentences,sub-012,0.007896205273304308
+11,Phoneme Surp./Ent.,Sentences,sub-013,0.0023227185336502287
+12,Phoneme Surp./Ent.,Sentences,sub-014,0.004541229311481437
+13,Phoneme Surp./Ent.,Sentences,sub-016,0.005224303659600536
+14,Phoneme Surp./Ent.,Sentences,sub-017,0.0011770560340259807
+15,Phoneme Surp./Ent.,Sentences,sub-018,0.008720594813536145
+16,Phoneme Surp./Ent.,Sentences,sub-019,0.0022705313517842555
+17,Phoneme Surp./Ent.,Sentences,sub-020,0.0008738521482049837
+18,Phoneme Surp./Ent.,Sentences,sub-021,0.005177446338947718
+19,Phoneme Surp./Ent.,Word_list,sub-002,0.0035165902017283003
+20,Phoneme Surp./Ent.,Word_list,sub-003,0.003607367456918876
+21,Phoneme Surp./Ent.,Word_list,sub-004,0.011912283288541131
+22,Phoneme Surp./Ent.,Word_list,sub-005,0.003425364510649089
+23,Phoneme Surp./Ent.,Word_list,sub-006,0.00123064527595116
+24,Phoneme Surp./Ent.,Word_list,sub-007,0.0027711340068305185
+25,Phoneme Surp./Ent.,Word_list,sub-008,0.004531241111443098
+26,Phoneme Surp./Ent.,Word_list,sub-009,0.005979442713206967
+27,Phoneme Surp./Ent.,Word_list,sub-010,0.010449515218716069
+28,Phoneme Surp./Ent.,Word_list,sub-011,0.0077600560945910516
+29,Phoneme Surp./Ent.,Word_list,sub-012,0.004644207244955901
+30,Phoneme Surp./Ent.,Word_list,sub-013,0.0018680499475249065
+31,Phoneme Surp./Ent.,Word_list,sub-014,0.002634077402873883
+32,Phoneme Surp./Ent.,Word_list,sub-016,0.004906653785038181
+33,Phoneme Surp./Ent.,Word_list,sub-017,0.0015335452225033494
+34,Phoneme Surp./Ent.,Word_list,sub-018,0.008624324025693032
+35,Phoneme Surp./Ent.,Word_list,sub-019,0.0025564147677604107
+36,Phoneme Surp./Ent.,Word_list,sub-020,0.0016321279239980085
+37,Phoneme Surp./Ent.,Word_list,sub-021,0.006115829385709018
+38,Phoneme Surp./Ent. Shuffeled,Sentences,sub-002,0.004723711564191751
+39,Phoneme Surp./Ent. Shuffeled,Sentences,sub-003,0.005100652176110858
+40,Phoneme Surp./Ent. Shuffeled,Sentences,sub-004,0.012311620456593177
+41,Phoneme Surp./Ent. Shuffeled,Sentences,sub-005,0.0037032761728107893
+42,Phoneme Surp./Ent. Shuffeled,Sentences,sub-006,0.0010583500498517685
+43,Phoneme Surp./Ent. Shuffeled,Sentences,sub-007,0.0033329413787373894
+44,Phoneme Surp./Ent. Shuffeled,Sentences,sub-008,0.008514892642819438
+45,Phoneme Surp./Ent. Shuffeled,Sentences,sub-009,0.005620047689685478
+46,Phoneme Surp./Ent. Shuffeled,Sentences,sub-010,0.01052819808219076
+47,Phoneme Surp./Ent. Shuffeled,Sentences,sub-011,0.009665990132862306
+48,Phoneme Surp./Ent. Shuffeled,Sentences,sub-012,0.00793105912888944
+49,Phoneme Surp./Ent. Shuffeled,Sentences,sub-013,0.0023023442129781763
+50,Phoneme Surp./Ent. Shuffeled,Sentences,sub-014,0.004573559465859165
+51,Phoneme Surp./Ent. Shuffeled,Sentences,sub-016,0.00526769376505247
+52,Phoneme Surp./Ent. Shuffeled,Sentences,sub-017,0.0012064395580052235
+53,Phoneme Surp./Ent. Shuffeled,Sentences,sub-018,0.00881712864612399
+54,Phoneme Surp./Ent. Shuffeled,Sentences,sub-019,0.002275079743469365
+55,Phoneme Surp./Ent. Shuffeled,Sentences,sub-020,0.0008904697089459402
+56,Phoneme Surp./Ent. Shuffeled,Sentences,sub-021,0.005265753938786038
+57,Phoneme Surp./Ent. Shuffeled,Word_list,sub-002,0.0035673621193674804
+58,Phoneme Surp./Ent. Shuffeled,Word_list,sub-003,0.0036271363858605314
+59,Phoneme Surp./Ent. Shuffeled,Word_list,sub-004,0.011937948101819295
+60,Phoneme Surp./Ent. Shuffeled,Word_list,sub-005,0.0034820411845864754
+61,Phoneme Surp./Ent. Shuffeled,Word_list,sub-006,0.0012326759949025448
+62,Phoneme Surp./Ent. Shuffeled,Word_list,sub-007,0.002720653625502406
+63,Phoneme Surp./Ent. Shuffeled,Word_list,sub-008,0.0045718870208362305
+64,Phoneme Surp./Ent. Shuffeled,Word_list,sub-009,0.005963766722141679
+65,Phoneme Surp./Ent. Shuffeled,Word_list,sub-010,0.01041751618119647
+66,Phoneme Surp./Ent. Shuffeled,Word_list,sub-011,0.007699886202539568
+67,Phoneme Surp./Ent. Shuffeled,Word_list,sub-012,0.0045749167561804395
+68,Phoneme Surp./Ent. Shuffeled,Word_list,sub-013,0.0019059351608303554
+69,Phoneme Surp./Ent. Shuffeled,Word_list,sub-014,0.002606435611421682
+70,Phoneme Surp./Ent. Shuffeled,Word_list,sub-016,0.004947573706559221
+71,Phoneme Surp./Ent. Shuffeled,Word_list,sub-017,0.0015825510686673266
+72,Phoneme Surp./Ent. Shuffeled,Word_list,sub-018,0.008635663518679221
+73,Phoneme Surp./Ent. Shuffeled,Word_list,sub-019,0.0026271386290442856
+74,Phoneme Surp./Ent. Shuffeled,Word_list,sub-020,0.0016392010760348003
+75,Phoneme Surp./Ent. Shuffeled,Word_list,sub-021,0.006131825652538549
